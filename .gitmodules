@@ -1,0 +1,12 @@
+[submodule "Text2graph"]
+	path = Text2graph
+	url = git@github.com:BingSu12/MoMu.git
+[submodule "MoleculePrediction"]
+	path = MoleculePrediction
+	url = git@github.com:ddz16/MoleculePrediction.git
+[submodule "GraphTextRetrieval"]
+	path = GraphTextRetrieval
+	url = git@github.com:yangzhao1230/GraphTextRetrieval.git
+[submodule "MoleculeCaption"]
+	path = MoleculeCaption
+	url = git@github.com:ddz16/MoleculeCaption.git
