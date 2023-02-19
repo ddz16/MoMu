@@ -77,7 +77,7 @@ Prior to the pre-training procedure, we initialize the GIN model using the Graph
 
 Since the dataset files are too large, we just provide about one hundred graph-text pairs which can be used to test the pretrain process.
 
-Please download the full data files on [the Baidu Netdisk](https://pan.baidu.com/s/1aHJoYTTZWDHPCcRuu9I7Fg), the password is **1234**.
+Please download the full data files on [the Baidu Netdisk](https://pan.baidu.com/s/1hYbVOMhr7pwLkUtl5FWqbg), the password is **1234**.
 
 # Pretrain
 
