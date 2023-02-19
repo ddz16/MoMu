@@ -4,7 +4,7 @@ The PyTorch implementation of MoMu, described in "Natural Language-informed Unde
 
 # Data availability
 
-Our collected dataset consists of two folders holding molecular graphs and texts, respectively. The dataset (including smiles, graphs and texts) can be downloaded in [https://pan.baidu.com/s/1hYbVOMhr7pwLkUtl5FWqbg](https://pan.baidu.com/s/1hYbVOMhr7pwLkUtl5FWqbg), the passward is **1234**. 
+Our collected dataset consists of three folders holding molecular graphs, smiles and texts, respectively. The dataset can be downloaded in [https://pan.baidu.com/s/1hYbVOMhr7pwLkUtl5FWqbg](https://pan.baidu.com/s/1hYbVOMhr7pwLkUtl5FWqbg), the passward is **1234**. 
 For cross-modality retrieval, the PCdes dataset is available at https://github.com/thunlp/KV-PLM. For text-to-molecule generation, the pre-trained MoFlow is available at https://github.com/calvin-zcx/moflow. For molecule caption, the ChEBI-20 dataset is directly available in our repository. For molecule property prediction, the eight datasets from MoleculeNet are available at https://github.com/deepchem/deepchem/tree/master/datasets and the processed datasets are available at: http://snap.stanford.edu/gnn-pretrain/data/chem_dataset.zip. Please refer to the ReadMe in each part for the detailed data downloading and usage.
 
 We will introduce our pretrain method and all the downstream tasks below. Please refer to the ReadMe in each part for the source code, system requirements, installation, demo, instructions for use, etc. 
