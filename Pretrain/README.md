@@ -84,13 +84,13 @@ Please download the full data files on [the Baidu Netdisk](https://pan.baidu.com
 To jointly pretrain the text encoder (Bert which is initized by the KV-PLM checkpoint) and the graph encoder (GIN) on eight gpus, run this command:
 
 ```
-python train_gin.py --batch_size=32 --accelerator='gpu' --gpus='0,1,2,3,4,5,6,7' --graph_self --max_epochs=300 --num_workers=8
+python train_gin.py --batch_size=32 --accelerator='gpu' --gpus='0,1,2,3,4,5,6,7' --max_epochs=300 --num_workers=8
 ```
 
 To jointly pretrain the text encoder (Bert which is initized by the SciBert checkpoint) and the graph encoder (GIN) on eight gpus, run this command:
 
 ```
-python train_gin.py --batch_size=32 --accelerator='gpu' --gpus='0,1,2,3,4,5,6,7' --graph_self --max_epochs=300 --num_workers=8 --bert_pretrain
+python train_gin.py --batch_size=32 --accelerator='gpu' --gpus='0,1,2,3,4,5,6,7' --max_epochs=300 --num_workers=8 --bert_pretrain
 ```
 
 The pretrained model will be placed in the `all_checkpoints/pretrain_gin/` folder. If you pretrain with all the graph-text pairs on eight GPUs, each epoch will cost 20 minutes.
