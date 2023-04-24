@@ -49,7 +49,7 @@ class GINSimclr(pl.LightningModule):
             # graph_pooling=self.graph_pooling,
         )
         # print(self.graph_encoder.state_dict().keys())
-        ckpt = torch.load('gin_pretrained/graphcl_80.pth')
+        ckpt = torch.load('gin_pretrained/graphMVP.pth')
         # print(ckpt.keys())
         missing_keys, unexpected_keys = self.graph_encoder.load_state_dict(ckpt, strict=False)
         print(missing_keys)
