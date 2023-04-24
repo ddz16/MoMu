@@ -15,7 +15,6 @@ class GINSimclr(pl.LightningModule):
             gin_num_layers,
             drop_ratio,
             graph_pooling,
-            graph_self,
             bert_hidden_dim,
             bert_pretrain,
             projection_dim,
@@ -30,7 +29,6 @@ class GINSimclr(pl.LightningModule):
         self.gin_num_layers = gin_num_layers
         self.drop_ratio = drop_ratio
         self.graph_pooling = graph_pooling
-        self.graph_self = graph_self
 
         self.bert_hidden_dim = bert_hidden_dim
         self.bert_pretrain = bert_pretrain
@@ -57,10 +55,17 @@ class GINSimclr(pl.LightningModule):
         print(missing_keys)
         print(unexpected_keys)
 
+        # Text Encoder
         if self.bert_pretrain:
             self.text_encoder = TextEncoder(pretrained=False)
         else:
             self.text_encoder = TextEncoder(pretrained=True)
+        
+        # Smiles Encoder (same as text encoder)
+        if self.bert_pretrain:
+            self.smiles_encoder = TextEncoder(pretrained=False)
+        else:
+            self.smiles_encoder = TextEncoder(pretrained=True)
             
         if self.bert_pretrain:
             print("bert load kvplm")
@@ -74,10 +79,12 @@ class GINSimclr(pl.LightningModule):
             # print(pretrained_dict.keys())
             # print(self.text_encoder.state_dict().keys())
             self.text_encoder.load_state_dict(pretrained_dict, strict=False)
+            self.smiles_encoder.load_state_dict(pretrained_dict, strict=False)
             # missing_keys, unexpected_keys = self.text_encoder.load_state_dict(pretrained_dict, strict=False)
             # print(missing_keys)
             # print(unexpected_keys)
         # self.feature_extractor.freeze()
+
 
         self.graph_proj_head = nn.Sequential(
           nn.Linear(self.gin_hidden_dim, self.gin_hidden_dim),
@@ -85,6 +92,11 @@ class GINSimclr(pl.LightningModule):
           nn.Linear(self.gin_hidden_dim, self.projection_dim)
         )
         self.text_proj_head = nn.Sequential(
+          nn.Linear(self.bert_hidden_dim, self.bert_hidden_dim),
+          nn.ReLU(inplace=True),
+          nn.Linear(self.bert_hidden_dim, self.projection_dim)
+        )
+        self.smiles_proj_head = nn.Sequential(
           nn.Linear(self.bert_hidden_dim, self.bert_hidden_dim),
           nn.ReLU(inplace=True),
           nn.Linear(self.bert_hidden_dim, self.projection_dim)
@@ -101,7 +113,7 @@ class GINSimclr(pl.LightningModule):
         logits_per_graph = features_graph @ features_text.t() / self.temperature
         logits_per_text = logits_per_graph.t()
 
-        labels = torch.arange(batch_size, dtype=torch.long, device=self.device)  # 大小为B
+        labels = torch.arange(batch_size, dtype=torch.long, device=self.device)
         loss_graph = F.cross_entropy(logits_per_graph, labels)
         loss_text = F.cross_entropy(logits_per_text, labels)
         loss = (loss_graph + loss_text) / 2
@@ -114,13 +126,13 @@ class GINSimclr(pl.LightningModule):
         return optimizer
 
     def training_step(self, batch, batch_idx):
-        aug1, aug2, text1, mask1, text2, mask2 = batch
+        graph, smiles, mask, text1, mask1, text2, mask2 = batch
 
-        graph1_rep = self.graph_encoder(aug1)
-        graph1_rep = self.graph_proj_head(graph1_rep)
+        graph_rep = self.graph_encoder(graph)
+        graph_rep = self.graph_proj_head(graph_rep)
 
-        graph2_rep = self.graph_encoder(aug2)
-        graph2_rep = self.graph_proj_head(graph2_rep)
+        smiles_rep = self.smiles_encoder(smiles, mask)
+        smiles_rep = self.smiles_proj_head(smiles_rep)
 
         text1_rep = self.text_encoder(text1, mask1)
         text1_rep = self.text_proj_head(text1_rep)
@@ -128,16 +140,11 @@ class GINSimclr(pl.LightningModule):
         text2_rep = self.text_encoder(text2, mask2)
         text2_rep = self.text_proj_head(text2_rep)
 
-        _, _, loss11 = self.forward(graph1_rep, text1_rep)
-        _, _, loss12 = self.forward(graph1_rep, text2_rep)
-        _, _, loss21 = self.forward(graph2_rep, text1_rep)
-        _, _, loss22 = self.forward(graph2_rep, text2_rep)
+        _, _, loss1 = self.forward(graph_rep, text1_rep)
+        _, _, loss2 = self.forward(graph_rep, text2_rep)
+        _, _, loss3 = self.forward(graph_rep, smiles_rep)
 
-        if self.graph_self:
-            _, _, loss_graph_self = self.forward(graph1_rep, graph2_rep)
-            loss = (loss11 + loss12 + loss21 + loss22 + loss_graph_self) / 5.0
-        else:
-            loss = (loss11 + loss12 + loss21 + loss22) / 4.0
+        loss = (loss1 + loss2 + loss3) / 3.0
 
         self.log("train_loss", loss)
         return loss
@@ -152,7 +159,6 @@ class GINSimclr(pl.LightningModule):
         parser.add_argument('--gin_num_layers', type=int, default=5)
         parser.add_argument('--drop_ratio', type=float, default=0.0)
         parser.add_argument('--graph_pooling', type=str, default='sum')
-        parser.add_argument('--graph_self', action='store_true', help='use graph self-supervise or not', default=False)
         # Bert
         parser.add_argument('--bert_hidden_dim', type=int, default=768, help='')
         parser.add_argument('--bert_pretrain', action='store_false', default=True)

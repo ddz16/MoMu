@@ -10,33 +10,32 @@ from transformers import BertTokenizer
 
 
 class GINPretrainDataset(Dataset):
-    def __init__(self, root, text_max_len, graph_aug1, graph_aug2):
+    def __init__(self, root, text_max_len):
         super(GINPretrainDataset, self).__init__(root)
         self.root = root
-        self.graph_aug1 = graph_aug1
-        self.graph_aug2 = graph_aug2
         self.text_max_len = text_max_len
         self.graph_name_list = os.listdir(root+'graph/')
         self.graph_name_list.sort()
         self.text_name_list = os.listdir(root+'text/')
         self.text_name_list.sort()
-
+        self.smiles_name_list = os.listdir(root+'smiles/')
+        self.smiles_name_list.sort()
+        self.tokenizer = BertTokenizer.from_pretrained('bert_pretrained/')
 
     def __len__(self):
         return len(self.graph_name_list)
 
     def __getitem__(self, index):
-        graph_name, text_name = self.graph_name_list[index], self.text_name_list[index]
+        graph_name, text_name, smiles_name = self.graph_name_list[index], self.text_name_list[index], self.smiles_name_list[index]
+        # print(graph_name)
+        # print(text_name)
+
         # load and process graph
         graph_path = os.path.join(self.root, 'graph', graph_name)
         data_graph = torch.load(graph_path)
 
-        data_aug1 = self.augment(data_graph, self.graph_aug1)
-        data_aug2 = self.augment(data_graph, self.graph_aug2)
-
         # load and process text
         text_path = os.path.join(self.root, 'text', text_name)
-
         text_list = []
         count = 0
         for line in open(text_path, 'r', encoding='utf-8'):
@@ -46,31 +45,21 @@ class GINPretrainDataset(Dataset):
                 break
         # print(text_list)
         if len(text_list) < 2:
-            two_text_list = [text_list[0], text_list[0][-self.text_max_len:]]
+            two_text_list = [text_list[0], text_list[0]]
         else:
             two_text_list = random.sample(text_list, 2)
         text_list.clear()
 
-        # # load and process text
-        # text_path = os.path.join(self.root, 'text', text_name)
-        # with open(text_path, 'r', encoding='utf-8') as f:
-        #     text_list = f.readlines()
-        # f.close()
-        # # print(text_list)
-        # if len(text_list) < 2:
-        #     two_text_list = [text_list[0], text_list[0][-self.text_max_len:]]
-        # else:
-        #     two_text_list = random.sample(text_list, 2)
-        # text_list.clear()
+        text1, mask1 = self.tokenizer_func(two_text_list[0])
+        text2, mask2 = self.tokenizer_func(two_text_list[1])
 
-        # print(random.sample([1,2,3,4,5,6,7,8,9,0,11,12,13,14,15,18],2))
-        text1, mask1 = self.tokenizer_text(two_text_list[0])
-        text2, mask2 = self.tokenizer_text(two_text_list[1])
+        # load and process smiles
+        smiles_path = os.path.join(self.root, 'smiles', smiles_name)
+        with open(smiles_path, 'r') as f:
+            smiles = f.readline().rstrip()
+        smiles_tokens, smiles_mask = self.tokenizer_func(smiles)
 
-        # print(graph_name)
-        # print(text_name)
-
-        return data_aug1, data_aug2, text1.squeeze(0), mask1.squeeze(0), text2.squeeze(0), mask2.squeeze(0)
+        return data_graph, smiles_tokens.squeeze(0), smiles_mask.squeeze(0), text1.squeeze(0), mask1.squeeze(0), text2.squeeze(0), mask2.squeeze(0)
 
     def augment(self, data, graph_aug):
         # node_num = data.edge_index.max()
@@ -122,28 +111,16 @@ class GINPretrainDataset(Dataset):
             data_aug = deepcopy(data)
             data_aug.x = torch.ones((data.edge_index.max()+1, 1))
 
-        # if graph_aug == 'dnodes' or graph_aug == 'subgraph' or graph_aug == 'random2' or graph_aug == 'random3' or graph_aug == 'random4':
-        #     edge_idx = data_aug.edge_index.numpy()
-        #     _, edge_num = edge_idx.shape
-        #     idx_not_missing = [n for n in range(node_num) if (n in edge_idx[0] or n in edge_idx[1])]
-        #     node_num_aug = len(idx_not_missing)
-        #     data_aug.x = data_aug.x[idx_not_missing]
-        #     # data_aug.batch = data.batch[idx_not_missing]
-        #     idx_dict = {idx_not_missing[n]: n for n in range(node_num_aug)}
-        #     edge_idx = [[idx_dict[edge_idx[0, n]], idx_dict[edge_idx[1, n]]] for n in range(edge_num) if not edge_idx[0, n] == edge_idx[1, n]]
-        #     data_aug.edge_index = torch.tensor(edge_idx).transpose_(0, 1)
-
         return data_aug
 
-    def tokenizer_text(self, text):
-        tokenizer = BertTokenizer.from_pretrained('bert_pretrained/')
-        sentence_token = tokenizer(text=text,
-                                   truncation=True,
-                                   padding='max_length',
-                                   add_special_tokens=False,
-                                   max_length=self.text_max_len,
-                                   return_tensors='pt',
-                                   return_attention_mask=True)
+    def tokenizer_func(self, text):
+        sentence_token = self.tokenizer(text=text,
+                                        truncation=True,
+                                        padding='max_length',
+                                        add_special_tokens=False,
+                                        max_length=self.text_max_len,
+                                        return_tensors='pt',
+                                        return_attention_mask=True)
         input_ids = sentence_token['input_ids']  # [176,398,1007,0,0,0]
         attention_mask = sentence_token['attention_mask']  # [1,1,1,0,0,0]
         return input_ids, attention_mask
@@ -157,7 +134,7 @@ if __name__ == '__main__':
     #     shuffle=True,
     #     num_workers=4
     # )
-    # for i, (aug1, aug2, text1, mask1, text2, mask2) in enumerate(train_loader):
+    # for i, (graph, text1, mask1, text2, mask2) in enumerate(train_loader):
     #     print(aug1.edge_index.shape)
     #     print(aug1.x.shape)
     #     print(aug1.ptr.size(0))
@@ -179,7 +156,7 @@ if __name__ == '__main__':
     #                            multi_hop_max_dist=5,
     #                            spatial_pos_max=1024),
     #     )
-    # aug1, aug2, text1, mask1, text2, mask2 = mydataset[0]
+    # graph, text1, mask1, text2, mask2 = mydataset[0]
     mydataset = GINPretrainDataset(root='data/', text_max_len=128, graph_aug1='dnodes', graph_aug2='subgraph')
     train_loader = torch_geometric.loader.DataLoader(
             mydataset,
@@ -190,20 +167,12 @@ if __name__ == '__main__':
             drop_last=True,
             # persistent_workers = True
         )
-    # aug1, aug2, text1, mask1, text2, mask2 = mydataset[0]
-    # print(aug1)
-    # print(aug1.x.shape)
-    # print(aug2)
-    # print(aug2.x.dtype)
-    # print(text1.shape)
-    # print(mask1.shape)
-    # print(text2.shape)
-    # print(mask2.shape)
-    for i, (aug1, aug2, text1, mask1, text2, mask2) in enumerate(train_loader):
-        print(aug1)
-        # print(aug1.x.shape)
-        # print(aug2)
-        # print(aug2.x.dtype)
+
+    for i, (graph, text1, mask1, text2, mask2) in enumerate(train_loader):
+        print(graph)
+        # print(graph.x.shape)
+        # print(graph)
+        # print(graph.x.dtype)
         # print(text1.shape)
         # print(mask1.shape)
         # print(text2.shape)
