@@ -33,7 +33,7 @@ def main(args):
         gin_num_layers=args.gin_num_layers,
         drop_ratio=args.drop_ratio,
         graph_pooling=args.graph_pooling,
-        graph_self=args.graph_self,
+        # graph_self=args.graph_self,
         bert_hidden_dim=args.bert_hidden_dim,
         bert_pretrain=args.bert_pretrain,
         projection_dim=args.projection_dim,
