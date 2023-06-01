@@ -22,44 +22,48 @@ class GINPretrainDataset(Dataset):
         self.smiles_name_list.sort()
         self.tokenizer = BertTokenizer.from_pretrained('bert_pretrained/')
 
+        # preprocess data
+        self.data_list = []
+        
+        for index in range(len(self.graph_name_list)):
+            graph_name, text_name, smiles_name = self.graph_name_list[index], self.text_name_list[index], self.smiles_name_list[index]
+            
+            # load and process graph
+            graph_path = os.path.join(self.root, 'graph', graph_name)
+            data_graph = torch.load(graph_path)
+
+            # load and process text
+            text_path = os.path.join(self.root, 'text', text_name)
+            text_list = []
+            count = 0
+            for line in open(text_path, 'r', encoding='utf-8'):
+                count += 1
+                text_list.append(line)
+                if count > 500:
+                    break
+            # print(text_list)
+            if len(text_list) < 2:
+                two_text_list = [text_list[0], text_list[0]]
+            else:
+                two_text_list = random.sample(text_list, 2)
+            text_list.clear()
+
+            text1, mask1 = self.tokenizer_func(two_text_list[0])
+            text2, mask2 = self.tokenizer_func(two_text_list[1])
+
+            # load and process smiles
+            smiles_path = os.path.join(self.root, 'smiles', smiles_name)
+            with open(smiles_path, 'r') as f:
+                smiles = f.readline().rstrip()
+            smiles_tokens, smiles_mask = self.tokenizer_func(smiles)
+
+            self.data_list.append((data_graph, smiles_tokens.squeeze(0), smiles_mask.squeeze(0), text1.squeeze(0), mask1.squeeze(0), text2.squeeze(0), mask2.squeeze(0)))
+
     def __len__(self):
         return len(self.graph_name_list)
 
     def __getitem__(self, index):
-        graph_name, text_name, smiles_name = self.graph_name_list[index], self.text_name_list[index], self.smiles_name_list[index]
-        # print(graph_name)
-        # print(text_name)
-
-        # load and process graph
-        graph_path = os.path.join(self.root, 'graph', graph_name)
-        data_graph = torch.load(graph_path)
-
-        # load and process text
-        text_path = os.path.join(self.root, 'text', text_name)
-        text_list = []
-        count = 0
-        for line in open(text_path, 'r', encoding='utf-8'):
-            count += 1
-            text_list.append(line)
-            if count > 500:
-                break
-        # print(text_list)
-        if len(text_list) < 2:
-            two_text_list = [text_list[0], text_list[0]]
-        else:
-            two_text_list = random.sample(text_list, 2)
-        text_list.clear()
-
-        text1, mask1 = self.tokenizer_func(two_text_list[0])
-        text2, mask2 = self.tokenizer_func(two_text_list[1])
-
-        # load and process smiles
-        smiles_path = os.path.join(self.root, 'smiles', smiles_name)
-        with open(smiles_path, 'r') as f:
-            smiles = f.readline().rstrip()
-        smiles_tokens, smiles_mask = self.tokenizer_func(smiles)
-
-        return data_graph, smiles_tokens.squeeze(0), smiles_mask.squeeze(0), text1.squeeze(0), mask1.squeeze(0), text2.squeeze(0), mask2.squeeze(0)
+        return self.data_list[index]
 
     def augment(self, data, graph_aug):
         # node_num = data.edge_index.max()
