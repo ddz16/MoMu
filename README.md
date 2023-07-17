@@ -1,6 +1,6 @@
 # MoMu
 
-The PyTorch implementation of MoMu, described in "Natural Language-informed Understanding of Molecule Graphs".
+The PyTorch implementation of MoMu, described in "Natural Language-informed Modeling of Molecule Graphs".
 
 # Data availability
 
@@ -40,8 +40,8 @@ Molecular property prediction is a graph-level prediction task that is usually u
 
 ```
 @article{su2022molecular,
-  title={Natural Language-informed Understanding of Molecule Graphs},
-  author={Bing Su, Dazhao Du, Zhao Yang, Yujie Zhou, Jiangmeng Li, Anyi Rao, Hao Sun, Zhiwu Lu, Ji-Rong Wen},
+  title={Natural Language-informed Modeling of Molecule Graphs},
+  author={Bing Su, Dazhao Du, Zhao Yang, Yujie Zhou, Jiangmeng Li, Anyi Rao, Zhiwu Lu, Hao Sun, Ji-Rong Wen},
   year={2022}
 }
 ```
